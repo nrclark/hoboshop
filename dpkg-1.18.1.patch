@@ -1,0 +1,123 @@
+diff --git a/.dist-version b/.dist-version
+index e69de29..ec6d649 100644
++++ b/.dist-version
+@@ -0,0 +1,1@@
++1.18.1
+diff --git a/lib/compat/strerror.c b/lib/compat/strerror.c
+index a0cb478..c876f5b 100644
+--- a/lib/compat/strerror.c
++++ b/lib/compat/strerror.c
+@@ -23,6 +23,7 @@
+ #include <gettext.h>
+ 
+ #include "compat.h"
++#include <errno.h>
+ 
+ #define _(str) gettext(str)
+ 
+diff --git a/lib/compat/strsignal.c b/lib/compat/strsignal.c
+index 265feb4..c2f2d83 100644
+--- a/lib/compat/strsignal.c
++++ b/lib/compat/strsignal.c
+@@ -55,8 +55,12 @@ const char *const sys_siglist[] = {
+ 	"SIGTTOU",	/* 22 */
+ };
+ #else
++#ifdef __CYGWIN__
++extern const char __declspec(dllimport) *sys_siglist[NSIG];
++#else
+ extern const char *const sys_siglist[];
+ #endif
++#endif
+ 
+ const char *
+ strsignal(int s)
+diff --git a/utils/start-stop-daemon.c b/utils/start-stop-daemon.c
+index c35f448..586c344 100644
+--- a/utils/start-stop-daemon.c
++++ b/utils/start-stop-daemon.c
+@@ -27,6 +27,8 @@
+ 
+ #if defined(linux)
+ #  define OSLinux
++#elif defined(__CYGWIN__)
++#  define OSCygwin
+ #elif defined(__GNU__)
+ #  define OSHurd
+ #elif defined(__sun)
+@@ -120,7 +122,7 @@
+ #define SCHED_RR -1
+ #endif
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ /* This comes from TASK_COMM_LEN defined in Linux' include/linux/sched.h. */
+ #define PROCESS_NAME_SIZE 15
+ #elif defined(OSsunos)
+@@ -138,9 +140,11 @@
+ #define PROCESS_NAME_SIZE MAXCOMLEN
+ #endif
+ 
+-#if defined(SYS_ioprio_set) && defined(linux)
++#if defined(SYS_ioprio_set)
++#if defined(linux) || defined(__CYGWIN__)
+ #define HAVE_IOPRIO_SET
+ #endif
++#endif
+ 
+ #define IOPRIO_CLASS_SHIFT 13
+ #define IOPRIO_PRIO_VALUE(class, prio) (((class) << IOPRIO_CLASS_SHIFT) | (prio))
+@@ -1208,7 +1212,7 @@ setup_options(void)
+ 	}
+ }
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ static const char *
+ proc_status_field(pid_t pid, const char *field)
+ {
+@@ -1313,7 +1317,7 @@ ssd_kvm_get_procs(kvm_t *kd, int op, int arg, int *count)
+ }
+ #endif
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ static bool
+ pid_is_exec(pid_t pid, const struct stat *esb)
+ {
+@@ -1453,7 +1457,7 @@ cleanup:
+ }
+ #endif
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ static bool
+ pid_is_child(pid_t pid, pid_t ppid)
+ {
+@@ -1530,7 +1534,7 @@ cleanup:
+ }
+ #endif
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ static bool
+ pid_is_user(pid_t pid, uid_t uid)
+ {
+@@ -1598,7 +1602,7 @@ cleanup:
+ }
+ #endif
+ 
+-#if defined(OSLinux)
++#if defined(OSLinux) || defined(OSCygwin)
+ static bool
+ pid_is_cmd(pid_t pid, const char *name)
+ {
+@@ -1751,7 +1755,7 @@ do_pidfile(const char *name)
+ 		fatal("unable to open pidfile %s", name);
+ }
+ 
+-#if defined(OSLinux) || defined (OSsunos)
++#if defined(OSLinux) || defined(OSCygwin) || defined (OSsunos)
+ static enum status_code
+ do_procinit(void)
+ {
