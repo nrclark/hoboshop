@@ -1,0 +1,34 @@
+--- configure.ac
++++ configure.ac
+@@ -348,6 +348,11 @@ case "${host_os}" in
+ 		STRIP_SHARED="-S"
+ 		STRIP_STATIC="-S"
+ 		;;
++	cygwin*)
++		AC_MSG_NOTICE([Cygwin detected. Root requirements will be lifted.]) 
++		AC_DEFINE([IS_CYGWIN],[1],[Description: Make #define IS_CYGWIN 1])
++		AC_DEFINE([NO_ROOTCHECK],[1],[Description: Make #define NO_ROOTCHECK 1])
++		;;
+ esac
+ 
+ AM_CONDITIONAL([DARWIN], test "x$host_os_darwin" = "xyes")
+--- src/pacman/util.c
++++ src/pacman/util.c
+@@ -103,6 +103,9 @@ int trans_release(void)
+ 
+ int needs_root(void)
+ {
++#ifdef NO_ROOTCHECK
++	return 0;
++#else
+ 	switch(config->op) {
+ 		case PM_OP_DATABASE:
+ 			return 1;
+@@ -116,6 +119,7 @@ int needs_root(void)
+ 		default:
+ 			return 0;
+ 	}
++#endif
+ }
+ 
+ int check_syncdbs(size_t need_repos, int check_valid)
