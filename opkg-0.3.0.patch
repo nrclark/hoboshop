@@ -1,0 +1,13 @@
+diff --git a/libopkg/file_util.h b/libopkg/file_util.h
+index c3cf9c6..9d28ea6 100644
+--- a/libopkg/file_util.h
++++ b/libopkg/file_util.h
+@@ -19,6 +19,8 @@
+ #ifndef FILE_UTIL_H
+ #define FILE_UTIL_H
+ 
++#include <stdio.h>
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
