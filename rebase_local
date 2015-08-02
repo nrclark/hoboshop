@@ -1,0 +1,31 @@
+#!/bin/bash
+
+LIBTYPES="dll so oct mex"
+BINTYPES="exe"
+DIRS="/usr/local/bin /usr/local/lib"
+
+mkdir -p /var/lib/rebase/user.d
+rm -f /var/lib/rebase/user.d/libraries
+rm -f /var/lib/rebase/user.d/binaries
+touch /var/lib/rebase/user.d/libraries
+touch /var/lib/rebase/user.d/binaries
+
+
+for ftype in $LIBTYPES; do
+    for dir in $DIRS; do
+        find "$dir" | grep -E "*.$ftype$" | tee -a /var/lib/rebase/user.d/libraries
+    done
+done
+
+for ftype in $BINTYPES; do
+    for dir in $DIRS; do
+        find "$dir" | grep -E "*.$ftype$" | tee -a /var/lib/rebase/user.d/binaries
+    done
+done
+
+chmod -R +w /var/cache/rebase
+rebaselst user
+rebaselst rebase
+rebaselst peflags
+
+exit 0
