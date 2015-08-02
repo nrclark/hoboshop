@@ -1,0 +1,18 @@
+diff --git a/configure.ac b/configure.ac
+index 73944d3..7b10ce6 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -198,6 +198,13 @@ case $host in
+   ;;
+ esac
+ 
++case $host in
++  *cygwin* )
++  AC_DEFINE([_NSIG], NSIG, [Changes the standard _NSIG to Cygwin's NSIG.])
++  ;;
++esac
++
++
+ # Checks for header files.
+ AC_HEADER_DIRENT
+ AC_HEADER_SYS_WAIT
