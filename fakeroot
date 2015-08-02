@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# This script first starts faked (the daemon), and then it will run
+# the requested program with fake root privileges.
+
+usage () {
+cat - >&2 <<EOF
+fakeroot, create a fake fake-root environment for use in Cygwin.
+   usage: fakeroot [-l|--lib fakerootlib] [-f|--faked fakedbin]
+                   [-i file] [-s file] [-u|--unknown-is-real]
+		   [-b|--fd-base fd] [-h|--help] [-v|--version]
+                   [--] [command]
+EOF
+  exit 1
+}
+
+stderr ()
+{
+  local i
+  for i
+  do
+      echo >&2 "fakeroot: $i"
+  done
+}
+
+fatal ()
+{
+  stderr "$@"
+  exit 1
+}
+
+GETOPTEST=`getopt --version`
+case $GETOPTEST in
+getopt*) # GNU getopt
+    FAKE_TEMP=`getopt -l lib: -l faked: -l unknown-is-real -l fd-base: -l version -l help -- +l:f:i:s:ub:vh "$@"`
+    ;;
+*) # POSIX getopt ?
+    FAKE_TEMP=`getopt l:f:i:s:ub:vh "$@"`
+    ;;
+esac
+
+if test "$?" -ne 0; then
+  usage
+fi
+
+eval set -- "$FAKE_TEMP"
+
+while test "X$1" != "X--"; do
+  case "$1" in
+    -v|--version)
+       echo "Cygwin exta-fake root version 1.00"
+       exit 0
+       ;;
+    -h|--help)
+       usage
+       ;;
+  esac
+  shift
+done
+
+shift #get rid of the '--'
+
+if test -n "$FAKEROOTKEY"
+then
+    fatal "FAKEROOTKEY set to $FAKEROOTKEY" \
+          "nested operation not yet supported"
+fi
+unset FAKEROOTKEY
+FAKEROOTKEY=123456
+
+if test -z "$*"; then
+  FAKEROOTKEY=$FAKEROOTKEY ${SHELL:-/bin/sh}
+  RESULT=$?
+else
+  FAKEROOTKEY=$FAKEROOTKEY "$@"
+  RESULT=$?
+fi
+
+exit $RESULT
+
+# Local Variables:
+# mode: shell-script
+# End:
