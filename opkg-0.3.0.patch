@@ -11,3 +11,57 @@ index c3cf9c6..9d28ea6 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
+diff --git a/libopkg/opkg_archive.c b/libopkg/opkg_archive.c
+index be903e4..0d0576c 100644
+--- a/libopkg/opkg_archive.c
++++ b/libopkg/opkg_archive.c
+@@ -22,6 +22,7 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#include "opkg_conf.h"
+ #include "opkg_message.h"
+ #include "opkg_archive.h"
+ #include "file_util.h"
+@@ -716,6 +717,9 @@ struct opkg_ar *ar_open_pkg_data_archive(const char *filename)
+     ar->extract_flags = ARCHIVE_EXTRACT_OWNER | ARCHIVE_EXTRACT_PERM |
+         ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_UNLINK;
+ 
++    if(opkg_config->ignore_uid)
++        ar->extract_flags &= ~ARCHIVE_EXTRACT_OWNER;
++
+     return ar;
+ }
+ 
+diff --git a/libopkg/opkg_conf.c b/libopkg/opkg_conf.c
+index aa2f8c7..4aa54e5 100644
+--- a/libopkg/opkg_conf.c
++++ b/libopkg/opkg_conf.c
+@@ -58,6 +58,7 @@ static opkg_option_t options[] = {
+     {"force_overwrite", OPKG_OPT_TYPE_BOOL, &_conf.force_overwrite},
+     {"force_downgrade", OPKG_OPT_TYPE_BOOL, &_conf.force_downgrade},
+     {"force_reinstall", OPKG_OPT_TYPE_BOOL, &_conf.force_reinstall},
++    {"ignore_uid", OPKG_OPT_TYPE_BOOL, &_conf.ignore_uid},
+     {"force_space", OPKG_OPT_TYPE_BOOL, &_conf.force_space},
+     {"force_postinstall", OPKG_OPT_TYPE_BOOL, &_conf.force_postinstall},
+     {"autoremove", OPKG_OPT_TYPE_BOOL, &_conf.autoremove},
+@@ -609,6 +610,7 @@ int opkg_conf_load(void)
+ 
+     opkg_config->restrict_to_default_dest = 0;
+     opkg_config->default_dest = NULL;
++    opkg_config->ignore_uid = 0;
+ #if defined(HAVE_PATHFINDER)
+     opkg_config->check_x509_path = 1;
+ #endif
+diff --git a/libopkg/opkg_conf.h b/libopkg/opkg_conf.h
+index 13bf124..d17eafd 100644
+--- a/libopkg/opkg_conf.h
++++ b/libopkg/opkg_conf.h
+@@ -85,6 +85,7 @@ typedef struct opkg_conf {
+     int force_overwrite;
+     int force_downgrade;
+     int force_reinstall;
++    int ignore_uid;
+     int force_space;
+     int force_removal_of_dependent_packages;
+     int force_removal_of_essential_packages;
