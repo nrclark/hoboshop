@@ -1,0 +1,33 @@
+From e412a81aa862f9aa808f5dcd6de5da02259d3b5e Mon Sep 17 00:00:00 2001
+From: Nick Clark <nicholas.clark@gmail.com>
+Date: Wed, 5 Aug 2015 11:09:26 -0700
+Subject: [opkg-0.3.0 PATCH 1/4] libopkg/file_util.h: Patch for building on
+ Cygwin.
+To: opkg-devel@googlegroups.com
+Cc: paul@paulbarker.me.uk
+
+Cygwin's GCC doesn't appear to automatically include stdio.h. This
+causes an error when trying to build files that include file_util.h,
+which needs the FILE data-type.
+
+Signed-off-by: Nick Clark <nicholas.clark@gmail.com>
+---
+ libopkg/file_util.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libopkg/file_util.h b/libopkg/file_util.h
+index c3cf9c6..73c4d44 100644
+--- a/libopkg/file_util.h
++++ b/libopkg/file_util.h
+@@ -23,6 +23,8 @@
+ extern "C" {
+ #endif
+ 
++#include <stdio.h>
++
+ int file_exists(const char *file_name);
+ int file_is_dir(const char *file_name);
+ int file_is_symlink(const char *file_name);
+-- 
+2.4.5
+

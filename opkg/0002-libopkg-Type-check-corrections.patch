@@ -1,0 +1,192 @@
+From a5521c780d2c790edc3018614c6cba3289863635 Mon Sep 17 00:00:00 2001
+From: Nick Clark <nicholas.clark@gmail.com>
+Date: Wed, 5 Aug 2015 12:49:45 -0700
+Subject: [opkg-0.3.0 PATCH 2/4] libopkg: Type-check corrections.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+To: opkg-devel@googlegroups.com
+Cc: paul@paulbarker.me.uk
+
+This commit fixes warnings of the type "warning: array subscript has
+type ‘char’ [-Wchar-subscripts]", which are emitted by GCC when libopkg
+is compiled with -Wchar-subscripts enabled.
+
+Signed-off-by: Nick Clark <nicholas.clark@gmail.com>
+---
+ libopkg/opkg_download_curl.c |  2 +-
+ libopkg/opkg_utils.c         |  6 +++---
+ libopkg/parse_util.c         |  4 ++--
+ libopkg/pkg.c                | 12 ++++++------
+ libopkg/pkg_depends.c        | 10 +++++-----
+ libopkg/pkg_parse.c          |  2 +-
+ 6 files changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/libopkg/opkg_download_curl.c b/libopkg/opkg_download_curl.c
+index bcd1ec6..3cbf732 100644
+--- a/libopkg/opkg_download_curl.c
++++ b/libopkg/opkg_download_curl.c
+@@ -66,7 +66,7 @@ size_t header_write(char *ptr, size_t size, size_t nmemb, void *userdata)
+     char prefix[5];
+     unsigned long i;
+     for (i = 0; (i < 5) && (i < size * nmemb); ++i)
+-        prefix[i] = tolower(ptr[i]);
++        prefix[i] = tolower((int)ptr[i]);
+     if (str_starts_with(prefix, "etag:")) {
+         char **out = userdata;
+         char *start = strchr(ptr, '"') + 1;
+diff --git a/libopkg/opkg_utils.c b/libopkg/opkg_utils.c
+index 783eaf7..8981bcb 100644
+--- a/libopkg/opkg_utils.c
++++ b/libopkg/opkg_utils.c
+@@ -53,13 +53,13 @@ char *trim_xstrdup(const char *src)
+     const char *end;
+ 
+     /* remove it from the front */
+-    while (src && isspace(*src) && *src)
++    while (src && isspace((int)*src) && *src)
+         src++;
+ 
+     end = src + (strlen(src) - 1);
+ 
+     /* and now from the back */
+-    while ((end > src) && isspace(*end))
++    while ((end > src) && isspace((int)*end))
+         end--;
+ 
+     end++;
+@@ -73,7 +73,7 @@ int line_is_blank(const char *line)
+     const char *s;
+ 
+     for (s = line; *s; s++) {
+-        if (!isspace(*s))
++        if (!isspace((int)*s))
+             return 0;
+     }
+     return 1;
+diff --git a/libopkg/parse_util.c b/libopkg/parse_util.c
+index f8b6c6c..7c78b6b 100644
+--- a/libopkg/parse_util.c
++++ b/libopkg/parse_util.c
+@@ -66,7 +66,7 @@ char **parse_list(const char *raw, unsigned int *count, const char sep,
+     while (*raw) {
+         depends = xrealloc(depends, sizeof(char *) * (line_count + 1));
+ 
+-        while (isspace(*raw))
++        while (isspace((int)*raw))
+             raw++;
+ 
+         start = raw;
+@@ -74,7 +74,7 @@ char **parse_list(const char *raw, unsigned int *count, const char sep,
+             raw++;
+         end = raw;
+ 
+-        while (end > start && isspace(*end))
++        while (end > start && isspace((int)*end))
+             end--;
+ 
+         if (sep == ' ')
+diff --git a/libopkg/pkg.c b/libopkg/pkg.c
+index 4c4fa15..9680de5 100644
+--- a/libopkg/pkg.c
++++ b/libopkg/pkg.c
+@@ -873,11 +873,11 @@ static int order(char x)
+ {
+     if (x == '~')
+         return -1;
+-    if (isdigit(x))
++    if (isdigit((int)x))
+         return 0;
+     if (!x)
+         return 0;
+-    if (isalpha(x))
++    if (isalpha((int)x))
+         return x;
+ 
+     return 256 + (int)x;
+@@ -893,7 +893,7 @@ static int verrevcmp(const char *val, const char *ref)
+     while (*val || *ref) {
+         int first_diff = 0;
+ 
+-        while ((*val && !isdigit(*val)) || (*ref && !isdigit(*ref))) {
++        while ((*val && !isdigit((int)*val)) || (*ref && !isdigit((int)*ref))) {
+             int vc = order(*val), rc = order(*ref);
+             if (vc != rc)
+                 return vc - rc;
+@@ -905,15 +905,15 @@ static int verrevcmp(const char *val, const char *ref)
+             val++;
+         while (*ref == '0')
+             ref++;
+-        while (isdigit(*val) && isdigit(*ref)) {
++        while (isdigit((int)*val) && isdigit((int)*ref)) {
+             if (!first_diff)
+                 first_diff = *val - *ref;
+             val++;
+             ref++;
+         }
+-        if (isdigit(*val))
++        if (isdigit((int)*val))
+             return 1;
+-        if (isdigit(*ref))
++        if (isdigit((int)*ref))
+             return -1;
+         if (first_diff)
+             return first_diff;
+diff --git a/libopkg/pkg_depends.c b/libopkg/pkg_depends.c
+index fdab435..80cfa1b 100644
+--- a/libopkg/pkg_depends.c
++++ b/libopkg/pkg_depends.c
+@@ -1074,7 +1074,7 @@ static int parseDepends(compound_depend_t * compound_depend,
+         possibilities[i] = depend_init();
+         /* gobble up just the name first */
+         dest = buffer;
+-        while (*src && !isspace(*src) && (*src != '(') && (*src != '*')
++        while (*src && !isspace((int)*src) && (*src != '(') && (*src != '*')
+                && (*src != '|'))
+             *dest++ = *src++;
+         *dest = '\0';
+@@ -1083,8 +1083,8 @@ static int parseDepends(compound_depend_t * compound_depend,
+         /* now look at possible version info */
+ 
+         /* skip to next chars */
+-        if (isspace(*src))
+-            while (*src && isspace(*src))
++        if (isspace((int)*src))
++            while (*src && isspace((int)*src))
+                 src++;
+ 
+         /* extract constraint and version */
+@@ -1093,7 +1093,7 @@ static int parseDepends(compound_depend_t * compound_depend,
+             possibilities[i]->constraint = str_to_constraint(&src);
+ 
+             /* now we have any constraint, pass space to version string */
+-            while (isspace(*src))
++            while (isspace((int)*src))
+                 src++;
+ 
+             /* this would be the version string */
+@@ -1110,7 +1110,7 @@ static int parseDepends(compound_depend_t * compound_depend,
+         free(pkg_name);
+ 
+         /* now get past the ) and any possible | chars */
+-        while (*src && (isspace(*src) || (*src == ')') || (*src == '|')))
++        while (*src && (isspace((int)*src) || (*src == ')') || (*src == '|')))
+             src++;
+         if (*src == '*') {
+             compound_depend->type = GREEDY_DEPEND;
+diff --git a/libopkg/pkg_parse.c b/libopkg/pkg_parse.c
+index 8e6cf43..fe8db85 100644
+--- a/libopkg/pkg_parse.c
++++ b/libopkg/pkg_parse.c
+@@ -71,7 +71,7 @@ int parse_version(pkg_t * pkg, const char *vstr)
+     if (strncmp(vstr, "Version:", 8) == 0)
+         vstr += 8;
+ 
+-    while (*vstr && isspace(*vstr))
++    while (*vstr && isspace((int)*vstr))
+         vstr++;
+ 
+     /* A colon is only the epoch separator if it is the first non-numeric
+-- 
+2.4.5
+

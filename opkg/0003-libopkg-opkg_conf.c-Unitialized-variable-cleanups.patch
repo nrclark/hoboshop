@@ -1,0 +1,95 @@
+From 43c7d0dc4b1bc6b51b0fe8b9eef91755a3671e45 Mon Sep 17 00:00:00 2001
+From: Nick Clark <nicholas.clark@gmail.com>
+Date: Wed, 5 Aug 2015 14:37:31 -0700
+Subject: [opkg-0.3.0 PATCH 3/4] libopkg/opkg_conf.c: Unitialized variable
+ cleanups.
+To: opkg-devel@googlegroups.com
+Cc: paul@paulbarker.me.uk
+
+In OPKG 0.3.0, the '_conf' structure (referenced via opkg_config)
+is created as a static variable, but never initialized.
+
+During certain cleanup operations, the following pattern was used to
+deallocate string memory:
+
+    tmp_val = (char **)options[i].value;
+    if (*tmp_val) {
+        free(*tmp_val);
+        *tmp_val = NULL;
+    }
+
+This works, but only if options[i].value is zero-valued by default.
+On Linux, the memory segment it goes into is zero-filled prior to
+program launch, so was a non-issue. On Cygwin, it causes a segfault.
+
+This commit adds a zero-fill during opkg_conf_init(), and also ensures
+that all string pointers are set back to NULL after they are free()'ed.
+
+Signed-off-by: Nick Clark <nicholas.clark@gmail.com>
+---
+ libopkg/opkg_conf.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/libopkg/opkg_conf.c b/libopkg/opkg_conf.c
+index aa2f8c7..2fd3112 100644
+--- a/libopkg/opkg_conf.c
++++ b/libopkg/opkg_conf.c
+@@ -20,6 +20,7 @@
+ #include "config.h"
+ 
+ #include <stdio.h>
++#include <string.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
+@@ -244,6 +245,7 @@ int opkg_conf_set_option(const char *name, const char *value, int overwrite)
+             } else {
+                 /* Let's not leak memory. */
+                 free(*((char **const)o->value));
++                *((char **const)o->value) = NULL;
+             }
+         }
+ 
+@@ -518,6 +520,7 @@ static int glob_errfunc(const char *epath, int eerrno)
+ 
+ int opkg_conf_init(void)
+ {
++    memset(opkg_config, 0, sizeof(opkg_conf_t));
+     pkg_src_list_init(&opkg_config->pkg_src_list);
+     pkg_src_list_init(&opkg_config->dist_src_list);
+     pkg_dest_list_init(&opkg_config->pkg_dest_list);
+@@ -766,6 +769,7 @@ int opkg_conf_load(void)
+ 
+  err4:
+     free(opkg_config->lists_dir);
++    opkg_config->lists_dir = NULL;
+ 
+     pkg_hash_deinit();
+     hash_table_deinit(&opkg_config->file_hash);
+@@ -795,8 +799,12 @@ int opkg_conf_load(void)
+     }
+  err0:
+     nv_pair_list_deinit(&opkg_config->tmp_dest_list);
++
+     free(opkg_config->dest_str);
++    opkg_config->dest_str = NULL;
++
+     free(opkg_config->conf_file);
++    opkg_config->conf_file = NULL;
+ 
+     return -1;
+ }
+@@ -813,7 +821,10 @@ void opkg_conf_deinit(void)
+         rm_r(opkg_config->cache_dir);
+ 
+     free(opkg_config->dest_str);
++    opkg_config->dest_str = NULL;
++
+     free(opkg_config->conf_file);
++    opkg_config->conf_file = NULL;
+ 
+     pkg_src_list_deinit(&opkg_config->pkg_src_list);
+     pkg_src_list_deinit(&opkg_config->dist_src_list);
+-- 
+2.4.5
+
